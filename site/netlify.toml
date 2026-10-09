@@ -1,0 +1,3 @@
+[build]
+  publish = "../dist"
+  edge_functions = "edge-functions"

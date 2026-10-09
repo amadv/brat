@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+. myprog.sh
+
+USAGE="<NAME>"
+[ $# -eq 1 ] || usage
+
+eval 'printf "%s\n" "$'"$1"'"'

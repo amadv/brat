@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+. x.sh
+infile "${1:-}"
+version="${2:-$(x-version "$infile")}"
+
+awk '!/^[[:blank:]]*#\|/' "$infile" \
+  | awk '/^$/ { b = b "\n"; next } b { printf "%s", b; b = "" } 1' \
+  | sed "s/\\\$version\\\$/$version/g"

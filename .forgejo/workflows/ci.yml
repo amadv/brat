@@ -1,0 +1,63 @@
+name: Brat CI
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+
+defaults:
+  run:
+    shell: sh
+
+env:
+  CI: true
+  BRAT_JOBS: 8
+
+jobs:
+  linux:
+    name: Linux (${{ matrix.distro }})
+    runs-on: linux
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: alpine
+            image: alpine:latest
+          - distro: debian
+            image: debian:latest
+          - distro: fedora
+            image: fedora:latest
+    container:
+      image: ${{ matrix.image }}
+    steps:
+      - name: Install Git and make
+        run: |
+          if command -v apk >/dev/null; then apk add --no-cache git make; fi
+          if command -v apt >/dev/null; then apt update && apt install -y git make; fi
+          if command -v dnf >/dev/null; then dnf install -y git make; fi
+      - name: Checkout
+        run: |
+          git clone --depth 1 --branch "${{ github.ref_name }}" "${{ github.server_url }}/${{ github.repository }}" brat
+      - name: Run tests
+        run: brat/x test
+
+  freebsd:
+    name: FreeBSD
+    runs-on: freebsd
+    steps:
+      - name: Checkout
+        run: |
+          git clone --depth 1 --branch "${{ github.ref_name }}" "${{ github.server_url }}/${{ github.repository }}" brat
+      - name: Run tests
+        run: brat/x test
+
+  macos:
+    name: macOS
+    runs-on: macos
+    steps:
+      - name: Checkout
+        run: |
+          git clone --depth 1 --branch "${{ github.ref_name }}" "${{ github.server_url }}/${{ github.repository }}" brat
+      - name: Run tests
+        run: brat/x test

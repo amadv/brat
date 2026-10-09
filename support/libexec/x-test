@@ -1,0 +1,28 @@
+#!/bin/sh
+set -eu
+
+if [ -n "${BRAT:-}" ]; then
+  brat="$BRAT"
+else
+  x-build dist/preview/brat.sh >&2
+  brat="$BRAT_ROOT"/dist/preview/brat.sh
+fi
+
+files=
+for arg; do
+  case "$arg" in
+    *.brat | *.brat:* ) files=1 ;;
+  esac
+done
+
+if [ -z "$files" ]; then
+  cd "$BRAT_ROOT"
+  set -- "$@" test/*.brat
+fi
+
+tester="$(command -v brat)"
+setup="$BRAT_ROOT"/test/setup
+eval "unset X_OLDENV SELF BRAT_ROOT LIB LIBEXEC SHARE SITE; $X_OLDENV" 2>/dev/null || true
+
+[ ! -e "$setup" ] || "$setup" "$brat"
+BRAT_JOBS="${BRAT_JOBS:-8}" exec "$tester" "$@"

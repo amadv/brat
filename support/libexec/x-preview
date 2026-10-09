@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+x-build preview
+x--open-url "file://$BRAT_ROOT/dist/preview/index.html"

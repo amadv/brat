@@ -1,0 +1,54 @@
+#!/bin/sh
+. "$DIR"/helpers.sh
+
+@test "sources _unhandled.sh when no command matches" {
+  export MYPROG_UNHANDLED="echo unhandled"
+  run "$MYPROG" nonexistent || status=$?
+  read -r line <"$stdout"
+  [ "$line" = unhandled ]
+}
+
+@test "sources _unhandled.sh when no command is given" {
+  export MYPROG_UNHANDLED="echo unhandled"
+  run "$MYPROG"
+  read -r line <"$stdout"
+  [ "$line" = unhandled ]
+}
+
+@test "_unhandled.sh sees COMMAND and args" {
+  export MYPROG_UNHANDLED='eval "set --$args"; printf ":%s\n" "$COMMAND" "$@"'
+  run "$MYPROG" nonexistent one two || status=$?
+  compare "$stdout" output/unhandled-hook/command-and-args
+}
+
+@test "_unhandled.sh sees the original argument list" {
+  export MYPROG_UNHANDLED='printf ":%s\n" "$@"'
+  run "$MYPROG" -a nonexistent one || status=$?
+  compare "$stdout" output/unhandled-hook/original-args
+}
+
+@test "_unhandled.sh can exec a default command with the original arguments" {
+  export MYPROG_UNHANDLED='eval "set --$args"; exec myprog-args "$@"'
+  run "$MYPROG" -a -b
+  [ $status -eq 0 ]
+  compare "$stdout" output/unhandled-hook/default
+}
+
+@test "_unhandled.sh falls through to not-found or usage" {
+  export MYPROG_UNHANDLED=":"
+  run "$MYPROG" nonexistent || status=$?
+  [ $status -eq 127 ]
+  match "$stderr" '/^myprog: nonexistent: command not found$/'
+  run "$MYPROG"
+  [ $status -ne 0 ]
+  match "$stderr" '/^usage: myprog <COMMAND>$/'
+}
+
+@test "_unhandled.sh applies only within its namespace" {
+  export MYPROG_NS_UNHANDLED="echo ns"
+  run "$MYPROG" nonexistent || status=$?
+  [ ! -s "$stdout" ]
+  run "$MYPROG" ns nonexistent || status=$?
+  read -r line <"$stdout"
+  [ "$line" = ns ]
+}

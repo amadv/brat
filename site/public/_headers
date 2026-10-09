@@ -1,0 +1,8 @@
+/*
+  Vary: Accept, User-Agent
+
+/brat.sh
+  Content-Type: text/plain; charset=UTF-8
+
+/:version/brat.sh
+  Content-Type: text/plain; charset=UTF-8

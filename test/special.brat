@@ -1,0 +1,14 @@
+#!/bin/sh
+. "$DIR"/helpers.sh
+
+@test "prints usage when invoked with --- alone" {
+  run "$MYPROG" ---
+  [ $status -ne 0 ]
+  match "$stderr" '/^usage: myprog <COMMAND>$/'
+}
+
+@test "the special --- argument runs private executables" {
+  run "$MYPROG" --- myprog-public--private
+  read -r line <"$stdout"
+  [ "$line" = "$MYPROG_ROOT"/libexec/myprog-public--private ]
+}

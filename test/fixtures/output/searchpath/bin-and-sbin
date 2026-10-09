@@ -1,0 +1,2 @@
+$TEST_TMP.bin/tool-a
+$TEST_TMP.sbin/tool-b

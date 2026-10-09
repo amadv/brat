@@ -1,0 +1,27 @@
+#!/bin/sh
+. "$DIR"/helpers.sh
+
+@test 'prints the program name and $VERSION for --version' {
+  export MYPROG_INIT="VERSION=1.2.3"
+  run "$MYPROG" --version
+  [ $status -eq 0 ]
+  read -r line <"$stdout"
+  [ "$line" = "myprog 1.2.3" ]
+}
+
+@test "prints usage for --version when VERSION is unset or empty" {
+  run "$MYPROG" --version
+  [ $status -ne 0 ]
+  match "$stderr" '/^usage: myprog <COMMAND>$/'
+  export MYPROG_INIT="VERSION="
+  run "$MYPROG" --version
+  [ $status -ne 0 ]
+  match "$stderr" '/^usage: myprog <COMMAND>$/'
+}
+
+@test "passes --version to commands when other arguments are given" {
+  export MYPROG_INIT="VERSION=1.2.3"
+  run "$MYPROG" --version args
+  read -r line <"$stdout"
+  [ "$line" = :--version ]
+}

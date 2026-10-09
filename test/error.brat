@@ -1,0 +1,36 @@
+#!/bin/sh
+. "$DIR"/helpers.sh
+
+setup() {
+  mkdir "$TEST_TMP".bin
+  PATH="$TEST_TMP.bin:$PATH"
+}
+
+@test "commands can print errors with the error alias" {
+  run "$MYPROG" error one two
+  [ $status -eq 1 ]
+  compare "$stderr" output/error/one-two
+}
+
+@test "formats commands in namespaces, keeping hyphens in command names" {
+  ln -s "$MYPROG_ROOT"/libexec/myprog-error "$TEST_TMP".bin/myprog-ns-do-thing
+  run "$MYPROG" ns do-thing failed
+  [ $status -eq 1 ]
+  compare "$stderr" output/error/ns-do-thing
+}
+
+@test "formats namespaces, keeping hyphens in namespace names" {
+  ln -s "$MYPROG_PATH" "$TEST_TMP".bin/myprog-two-word
+  ln -s "$MYPROG_ROOT"/libexec/myprog-error "$TEST_TMP".bin/myprog-two-word-do-thing
+  run "$MYPROG" two-word do-thing failed
+  [ $status -eq 1 ]
+  compare "$stderr" output/error/two-word-do-thing
+}
+
+@test "formats commands in nested namespaces by the longest matching namespace" {
+  ln -s "$MYPROG_PATH" "$TEST_TMP".bin/myprog-ns-sub
+  ln -s "$MYPROG_ROOT"/libexec/myprog-error "$TEST_TMP".bin/myprog-ns-sub-do-thing
+  run "$MYPROG" ns sub do-thing failed
+  [ $status -eq 1 ]
+  compare "$stderr" output/error/ns-sub-do-thing
+}

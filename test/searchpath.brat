@@ -1,0 +1,70 @@
+#!/bin/sh
+. "$DIR"/helpers.sh
+
+searchpath() {
+  run "$MYPROG_PATH" --- searchpath "$@"
+  sed "s|^$TEST_TMP|\$TEST_TMP|" "$stdout" >"$TEST_TMP".out
+}
+
+setup() {
+  mkdir "$TEST_TMP".bin
+  PATH="$TEST_TMP.bin:$PATH"
+}
+
+@test 'finds executables in every $PATH directory' {
+  mkdir "$TEST_TMP".sbin
+  install "$TEST_TMP".bin/tool-a
+  install "$TEST_TMP".sbin/tool-b
+  PATH="$PATH:$TEST_TMP.sbin"
+  searchpath -name "tool-*"
+  compare "$TEST_TMP".out output/searchpath/bin-and-sbin
+}
+
+@test 'does not descend into subdirectories of $PATH directories' {
+  mkdir "$TEST_TMP".bin/sub
+  install "$TEST_TMP".bin/tool-a
+  install "$TEST_TMP".bin/sub/tool-sub
+  searchpath -name "tool-*"
+  compare "$TEST_TMP".out output/searchpath/bin-only
+}
+
+@test 'skips nonexistent $PATH directories' {
+  install "$TEST_TMP".bin/tool-a
+  PATH="$TEST_TMP.nonexistent:$PATH"
+  searchpath -name "tool-*"
+  [ $status -eq 0 ]
+  [ ! -s "$stderr" ]
+  compare "$TEST_TMP".out output/searchpath/bin-only
+}
+
+@test 'handles $PATH directories containing spaces' {
+  mkdir "$TEST_TMP.with space"
+  install "$TEST_TMP.with space"/tool-a
+  PATH="$TEST_TMP.with space:$PATH"
+  searchpath -name "tool-*"
+  compare "$TEST_TMP".out output/searchpath/with-space
+}
+
+@test 'handles relative $PATH directories' {
+  mkdir "$TEST_TMP".bin/relative
+  install "$TEST_TMP".bin/relative/tool-a
+  PATH="relative:$PATH"
+  (cd "$TEST_TMP".bin && searchpath -name "tool-*")
+  compare "$TEST_TMP".out output/searchpath/relative
+}
+
+@test 'follows symlinked $PATH directories' {
+  mkdir "$TEST_TMP".real
+  install "$TEST_TMP".real/tool-a
+  ln -s "$TEST_TMP".real "$TEST_TMP".link
+  PATH="$TEST_TMP.link:$PATH"
+  searchpath -name "tool-*"
+  compare "$TEST_TMP".out output/searchpath/link
+}
+
+@test "excludes executables with -- in their names" {
+  install "$TEST_TMP".bin/tool-a
+  install "$TEST_TMP".bin/tool-a--private
+  searchpath -name "tool-*"
+  compare "$TEST_TMP".out output/searchpath/bin-only
+}

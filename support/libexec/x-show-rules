@@ -1,0 +1,56 @@
+#!/bin/sh
+set -eu
+. x.sh
+
+USAGE="<INDEX-FILE>"
+[ $# -eq 1 ] || usage
+
+infile "$1"
+
+rule() {
+  printf "%s\n" "$1"
+  shift
+  [ $# -eq 0 ] || printf "\t%s\n" "$@"
+}
+
+version_rules() {
+  commit="$1"
+  version="$2"
+  src="build/src/$commit"
+
+  rule "all: dist/$version/brat.sh dist/$version/index.html"
+
+  rule "$src:" \
+    "x--emit \$@ git show $commit:brat.sh"
+
+  rule "dist/$version/brat.sh: $src \$(SCRIPT_DEPS)" \
+    "x--emit \$@ x-show dist $src $version"
+
+  rule "dist/$version/index.html: $src \$(PAGE_DEPS)" \
+    "x--emit \$@ x-show page $src $version"
+}
+
+latest_rules() {
+  version="$1"
+
+  rule "all: dist/_redirects dist/brat.sh"
+
+  rule "dist/_redirects: build/index" \
+    "x--emit \$@ echo / /$version/ 302"
+
+  rule "dist/brat.sh: dist/$version/brat.sh build/index" \
+    "cp dist/$version/brat.sh \$@"
+}
+
+rule "all:"
+printf "include \$(LIB)/deps.make\n"
+
+[ "$infile" = "-" ] || exec <"$infile"
+
+latest=
+while read -r commit version; do
+  version_rules "$commit" "$version"
+  latest="${latest:-$version}"
+done
+
+latest_rules "$latest"

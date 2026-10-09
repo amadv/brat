@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+fixture="$(dirname "$0")"/fixtures/myprog/bin/myprog
+mkdir -p "${fixture%/*}"
+cp "$1" "$fixture"
+chmod +x "$fixture"

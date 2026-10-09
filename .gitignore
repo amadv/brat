@@ -1,0 +1,4 @@
+/build
+/dist
+.netlify
+/test/fixtures/myprog/bin/myprog

@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eu
+
+exec fswatch \
+  --batch-marker=--- \
+  --event AttributeModified \
+  --event Created \
+  --event Updated \
+  --event Removed \
+  --event Renamed \
+  -l 0.5 \
+  -r \
+  "$@"

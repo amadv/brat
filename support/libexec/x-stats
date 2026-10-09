@@ -1,0 +1,46 @@
+#!/bin/sh
+set -eu
+cd "$BRAT_ROOT"
+
+count() {
+  "$@" | wc -lwc | awk '{ print $1, $2, $3 }'
+}
+
+ratio() {
+  printf "%s " "$1" "$2" | awk '{ printf "%.2f%s", $1 / $2, RS }'
+}
+
+read -r dist_lines dist_words dist_bytes <<EOF
+  $(count x-show dist)
+EOF
+
+read -r code_lines code_words code_bytes <<EOF
+  $(count x-show code)
+EOF
+
+read -r prose_lines prose_words prose_bytes <<EOF
+  $(x-show prose | count sed 's/^[[:blank:]]*#|//')
+EOF
+
+sha256="$(x-show dist brat.sh | sha256sum)"
+sha256="${sha256%% *}"
+version="$(x-version)"
+
+printf "\
+                        bytes     words     lines
+brat.sh (code)          %5d     %5d     %5d
+brat.sh (dist)          %5d     %5d     %5d
+brat.sh (prose)         %5d     %5d     %5d
+ratio (prose:code)      %5s     %5s     %5s
+
+dist SHA-256: %s
+version: %s
+" \
+  "$code_bytes" "$code_words" "$code_lines" \
+  "$dist_bytes" "$dist_words" "$dist_lines" \
+  "$prose_bytes" "$prose_words" "$prose_lines" \
+  "$(ratio "$prose_bytes" "$code_bytes")" \
+  "$(ratio "$prose_words" "$code_words")" \
+  "$(ratio "$prose_lines" "$code_lines")" \
+  "$sha256" \
+  "$version"

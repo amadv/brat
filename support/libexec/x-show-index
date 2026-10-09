@@ -1,0 +1,14 @@
+#!/bin/sh
+set -eu
+
+show() {
+  git show "$1":brat.sh
+}
+
+git rev-list HEAD -- brat.sh \
+  | while read -r commit; do
+      if show "$commit" | x-show prose - | grep -q .; then
+        printf "%s %s\n" "$commit" "$(show "$commit" | x-version -)"
+      fi
+    done \
+  | awk '!a[$2]++'

@@ -1,0 +1,68 @@
+#!/bin/sh
+. "$DIR"/helpers.sh
+
+resolve() {
+  case $# in
+    2 ) run "$MYPROG" "$1" --- resolve "$2" ;;
+    * ) run "$MYPROG" --- resolve "$1"
+  esac
+  read -r executable <"$stdout"
+}
+
+setup() {
+  mkdir "$TEST_TMP".bin
+  PATH="$TEST_TMP.bin:$PATH"
+}
+
+@test 'resolves commands in $LIBEXEC' {
+  resolve public
+  [ "$executable" = "$MYPROG_ROOT"/libexec/myprog-public ]
+}
+
+@test 'resolves prefixed executables elsewhere in $PATH' {
+  install "$TEST_TMP".bin/myprog-lint
+  resolve lint
+  [ "$executable" = "$TEST_TMP".bin/myprog-lint ]
+}
+
+@test 'resolves the first matching executable in $PATH' {
+  install "$TEST_TMP".bin/myprog-zero
+  resolve zero
+  [ "$executable" = "$MYPROG_ROOT"/libexec/myprog-zero ]
+}
+
+@test "only resolves executable files" {
+  touch "$TEST_TMP".bin/myprog-nonexecutable
+  not resolve nonexecutable
+}
+
+@test "does not resolve directories" {
+  mkdir "$TEST_TMP".bin/myprog-dir
+  not resolve dir
+}
+
+@test "resolves symlinks to executables" {
+  ln -s "$MYPROG_ROOT"/libexec/myprog-public "$TEST_TMP".bin/myprog-link
+  resolve link
+  [ "$executable" = "$TEST_TMP".bin/myprog-link ]
+}
+
+@test "does not resolve executables without the program prefix" {
+  install "$TEST_TMP".bin/lint
+  not resolve lint
+}
+
+@test "resolves commands in the current namespace only" {
+  install "$TEST_TMP".bin/myprog-ns-lint
+  install "$TEST_TMP".bin/myprog-lint-all
+  resolve ns lint
+  [ "$executable" = "$TEST_TMP".bin/myprog-ns-lint ]
+  not resolve ns-lint
+  resolve lint-all
+  [ "$executable" = "$TEST_TMP".bin/myprog-lint-all ]
+}
+
+@test "resolves command names exactly" {
+  resolve zero
+  not resolve zer
+}

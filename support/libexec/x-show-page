@@ -1,0 +1,21 @@
+#!/bin/sh
+set -eu
+. x.sh
+infile "${1:-}"
+version="${2:-$(x-version "$infile")}"
+
+preview=
+[ "$version" != "preview" ] || preview=true
+
+awk -f "$LIB"/weave.awk "$infile" \
+  | sed "s/\\\$version\\\$/$version/g" \
+  | exec pandoc \
+      --from markdown-native_divs \
+      --lua-filter "$LIB"/pandoc/code-hyphens.lua \
+      --lua-filter "$LIB"/pandoc/code-lines.lua \
+      --lua-filter "$LIB"/pandoc/section-numbers.lua \
+      --lua-filter "$LIB"/pandoc/small-caps.lua \
+      --template "$SITE"/brat.html \
+      --to html \
+      --variable version="$version" \
+      ${preview:+--variable preview}

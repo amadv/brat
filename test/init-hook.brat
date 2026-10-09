@@ -1,0 +1,40 @@
+#!/bin/sh
+. "$DIR"/helpers.sh
+
+@test "sources _init.sh before routing" {
+  export MYPROG_INIT="echo init"
+  run "$MYPROG" args one
+  compare "$stdout" output/init-hook/before-routing
+}
+
+@test "_init.sh can call helpers" {
+  export MYPROG_INIT="invocation myprog-ns-lint"
+  run "$MYPROG" args one
+  compare "$stdout" output/init-hook/helper
+}
+
+@test "_init.sh can rewrite the argument list" {
+  export MYPROG_INIT="set -- args rewritten"
+  run "$MYPROG" zero
+  compare "$stdout" output/init-hook/rewritten
+}
+
+@test "_init.sh can exit early with its own status" {
+  export MYPROG_INIT="exit 3"
+  run "$MYPROG" args one
+  [ $status -eq 3 ]
+  [ ! -s "$stdout" ]
+}
+
+@test "_init.sh can export variables to commands" {
+  export MYPROG_INIT="export LIB"
+  run "$MYPROG" var LIB
+  read -r line <"$stdout"
+  [ "$line" = "$MYPROG_ROOT"/lib/myprog ]
+}
+
+@test "sources both the root and the namespace _init.sh" {
+  export MYPROG_INIT="echo root" MYPROG_NS_INIT="echo ns"
+  run "$MYPROG" ns
+  compare "$stdout" output/init-hook/root-and-ns
+}

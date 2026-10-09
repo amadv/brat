@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+file="$1"
+shift
+
+mkdir -p "$(dirname "$file")"
+
+out="$file.$$"
+if "$@" >"$out"; then
+  mv "$out" "$file"
+else
+  status=$?
+  rm -f "$out"
+  exit $status
+fi

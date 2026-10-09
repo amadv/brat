@@ -1,0 +1,17 @@
+#!/bin/sh
+set -eu
+. x.sh
+
+USAGE="<CSS-FILE> [<URL-ROOT>]"
+[ $# -ge 1 ] && [ $# -le 2 ] || usage
+
+css="$1"
+dir="${2:-$SITE/public}"
+
+edits=
+for font in $(sed -n 's|.*url("\([^"]*\)").*/\* inline \*/.*|\1|p' "$css"); do
+  data="$(base64 <"$dir/$font" | tr -d '\n')"
+  edits="$edits s|url(\"$font\")|url(\"data:font/woff2;base64,$data\")|;"
+done
+
+exec sed "$edits s| /\* inline \*/||" "$css"

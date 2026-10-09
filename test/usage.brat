@@ -1,0 +1,31 @@
+#!/bin/sh
+. "$DIR"/helpers.sh
+
+setup() {
+  mkdir "$TEST_TMP".bin
+  PATH="$TEST_TMP.bin:$PATH"
+}
+
+@test "commands can print usage with the usage alias" {
+  run "$MYPROG" var
+  [ $status -eq 1 ]
+  compare "$stderr" output/usage/var
+}
+
+@test "lists commands once each, in sorted order" {
+  mkdir "$TEST_TMP".sbin
+  install "$TEST_TMP".bin/myprog-ns-b
+  install "$TEST_TMP".bin/myprog-ns-a
+  install "$TEST_TMP".sbin/myprog-ns-a
+  PATH="$PATH:$TEST_TMP.sbin"
+  run "$MYPROG" ns
+  [ $status -eq 1 ]
+  compare "$stderr" output/usage/ns-a-b
+}
+
+@test "USAGE set in _init.sh customizes the synopsis" {
+  export MYPROG_INIT='USAGE="<THING>"'
+  run "$MYPROG"
+  [ $status -ne 0 ]
+  match "$stderr" '/^usage: myprog <THING>$/'
+}

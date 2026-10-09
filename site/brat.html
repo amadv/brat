@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+$if(preview)$
+$else$
+    <link rel="preload" href="../fonts/pagella-regular.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="../fonts/pagella-italic.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="../fonts/heros-bold.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="../fonts/heros-regular.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="../fonts/courier-prime-code-regular.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="../fonts/courier-prime-regular.woff2" as="font" type="font/woff2" crossorigin>
+$endif$
+    <link rel="stylesheet" href="../layout.css">
+    <link rel="stylesheet" href="../fonts.css">
+    <meta property="og:url" content="https://github.com/amadv/brat/">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Brat: Router for Unix Tools">
+    <meta property="og:description" content="Annotated source code for Brat, the Bratty Router for Unix Tools, a single-file POSIX shell script for building Unix command-line programs.">
+    <meta property="og:image" content="https://github.com/amadv/brat/opengraph.jpg">
+    <meta name="description" content="Annotated source code for Brat, the Router for Unix Tools, a single-file POSIX shell script for building Unix command-line programs.">
+    <meta name="viewport" content="width=device-width">
+    <title>Brat: Router for Unix Tools</title>
+  </head>
+  <body>
+    <header>
+      <nav>
+        <p>Brat $if(preview)$$else$version $endif$$version$</p>
+        <ul>
+          <li><a href="https://github.com/amadv/brat">Contribute</a></li>
+          <li><a href="brat.sh">Download</a></li>
+        </ul>
+      </nav>
+    </header>
+    <main>
+$body$
+    </main>
+    <footer>
+      <hr>
+      <p>
+        Copyright © <a href="https://github.com/amadv">Aaron Madved</a>
+        <span class="slash">⁄</span>
+        Handwritten in Mexico City
+      </p>
+      <p class="legal">
+        <span class="smallcaps">UNIX®</span> is a registered trademark of The Open Group.<br>
+        <span class="smallcaps">POSIX™</span> is a trademark of <span class="smallcaps">IEEE</span>.
+      </p>
+    </footer>
+  </body>
+</html>

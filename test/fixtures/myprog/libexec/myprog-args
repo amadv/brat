@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+[ $# -eq 0 ] && exit
+printf ':%s\n' "$@"

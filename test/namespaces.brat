@@ -1,0 +1,71 @@
+#!/bin/sh
+. "$DIR"/helpers.sh
+
+setup() {
+  mkdir "$TEST_TMP".bin
+  PATH="$TEST_TMP.bin:$PATH"
+}
+
+@test "lists symlinks to the router as namespaces" {
+  ln -s "$MYPROG_PATH" "$TEST_TMP".bin/myprog-alias
+  ln -s "$MYPROG_ROOT"/libexec/myprog-zero "$TEST_TMP".bin/myprog-other
+  cp "$MYPROG_PATH" "$TEST_TMP".bin/myprog-copy
+  run "$MYPROG" --- namespaces
+  compare "$stdout" output/namespaces/alias-and-ns
+}
+
+@test "lists each namespace once, in sorted order" {
+  ln -s "$MYPROG_PATH" "$TEST_TMP".bin/myprog-ns
+  ln -s "$MYPROG_PATH" "$TEST_TMP".bin/myprog-alias
+  run "$MYPROG" --- namespaces
+  compare "$stdout" output/namespaces/alias-and-ns
+}
+
+@test "lists namespaces, but not their commands, as commands of the parent" {
+  install "$TEST_TMP".bin/myprog-ns-lint
+  run "$MYPROG" --- commands
+  match "$stdout" "/^ns$/"
+  not match "$stdout" "/^ns-lint$/"
+}
+
+@test "runs commands in namespaces" {
+  ln -s "$MYPROG_ROOT"/libexec/myprog-zero "$TEST_TMP".bin/myprog-ns-zero
+  run "$MYPROG" ns zero
+  read -r line <"$stdout"
+  [ "$line" = "$TEST_TMP".bin/myprog-ns-zero ]
+}
+
+@test "runs commands in nested namespaces" {
+  ln -s "$MYPROG_PATH" "$TEST_TMP".bin/myprog-ns-sub
+  ln -s "$MYPROG_ROOT"/libexec/myprog-zero "$TEST_TMP".bin/myprog-ns-sub-zero
+  run "$MYPROG" ns sub zero
+  read -r line <"$stdout"
+  [ "$line" = "$TEST_TMP".bin/myprog-ns-sub-zero ]
+}
+
+@test "runs commands in namespaces whose names contain hyphens" {
+  ln -s "$MYPROG_PATH" "$TEST_TMP".bin/myprog-two-word
+  ln -s "$MYPROG_ROOT"/libexec/myprog-zero "$TEST_TMP".bin/myprog-two-word-zero
+  run "$MYPROG" two-word zero
+  read -r line <"$stdout"
+  [ "$line" = "$TEST_TMP".bin/myprog-two-word-zero ]
+}
+
+@test "prints namespace usage when invoked without a command" {
+  run "$MYPROG" ns
+  [ $status -ne 0 ]
+  match "$stderr" '/^usage: myprog ns <COMMAND>$/'
+}
+
+@test "keeps hyphens in namespace names in usage messages" {
+  ln -s "$MYPROG_PATH" "$TEST_TMP".bin/myprog-two-word
+  run "$MYPROG" two-word
+  [ $status -ne 0 ]
+  match "$stderr" '/^usage: myprog two-word <COMMAND>$/'
+}
+
+@test "unknown commands in namespaces print a not-found message with the namespace" {
+  run "$MYPROG" ns nonexistent || status=$?
+  [ $status -eq 127 ]
+  match "$stderr" '/^myprog ns: nonexistent: command not found$/'
+}

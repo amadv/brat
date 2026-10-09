@@ -1,0 +1,23 @@
+#!/bin/sh
+set -eu
+
+x-watch--fswatch \
+  "$BRAT_ROOT"/brat.sh \
+  "$BRAT_ROOT"/site \
+  "$BRAT_ROOT"/support \
+  "$BRAT_ROOT"/test \
+  | x-watch--tag \
+  | while read -r tags; do
+      case " $tags " in
+        *" prose "* | *" site "* )
+          x-preview || true
+          ;;
+        * )
+          x-build preview || true
+      esac
+
+      case " $tags " in
+        *" code "* | *" support "* | *" test "* )
+          x-test || true
+      esac
+    done

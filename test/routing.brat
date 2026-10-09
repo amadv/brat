@@ -1,0 +1,112 @@
+#!/bin/sh
+. "$DIR"/helpers.sh
+
+@test "prints usage message when invoked without arguments" {
+  run "$MYPROG"
+  [ $status -ne 0 ]
+  match "$stderr" '/^usage: myprog <COMMAND>$/'
+}
+
+@test "runs commands by name" {
+  run "$MYPROG" zero
+  read -r line <"$stdout"
+  [ "$line" = "$MYPROG_ROOT"/libexec/myprog-zero ]
+}
+
+@test "passes arguments to commands" {
+  run "$MYPROG" args
+  compare "$stdout" /dev/null
+  run "$MYPROG" args single
+  compare "$stdout" output/routing/single
+  run "$MYPROG" args multiple arguments "with spaces"
+  compare "$stdout" output/routing/multiple
+}
+
+@test "propagates command exit statuses" {
+  run "$MYPROG" eval true
+  [ $status -eq 0 ]
+  run "$MYPROG" eval false
+  [ $status -eq 1 ]
+  run "$MYPROG" eval exit 100
+  [ $status -eq 100 ]
+}
+
+@test "commands replace the router process using exec" {
+  run sh -c 'printf "%s\n" "$$"; exec "$0" "$@"' "$MYPROG" var '$'
+  { read -r line1; read -r line2; } <"$stdout"
+  [ -n "$line1" ] && [ "$line1" = "$line2" ]
+}
+
+@test "commands receive standard input" {
+  run "$MYPROG" eval head -n 1 <"$MYPROG"
+  read -r line <"$stdout"
+  [ "$line" = "#!/bin/sh" ]
+}
+
+@test "skips leading option arguments to find the command name" {
+  run "$MYPROG" -h args one two
+  compare "$stdout" output/routing/leading-option
+}
+
+@test "prints usage message when invoked with only options" {
+  run "$MYPROG" -h
+  [ $status -ne 0 ]
+  match "$stderr" '/^usage: myprog <COMMAND>$/'
+}
+
+@test "passes all options before the command name in their original order" {
+  run "$MYPROG" -a -b args one
+  compare "$stdout" output/routing/leading-options
+}
+
+@test "passes --option=value arguments before the command name" {
+  run "$MYPROG" --option=value args one two
+  compare "$stdout" output/routing/leading-option-value
+}
+
+@test "passes options after the command name" {
+  run "$MYPROG" args -a one -b
+  compare "$stdout" output/routing/trailing-options
+}
+
+@test "empty arguments before the command name are not allowed" {
+  run "$MYPROG" "" args one two
+  [ $status -ne 0 ]
+  match "$stderr" '/^usage:/'
+}
+
+@test "preserves empty arguments after the command name" {
+  run "$MYPROG" args "" one "" two ""
+  compare "$stdout" output/routing/multiple-with-empty
+}
+
+@test "preserves arguments containing shell metacharacters" {
+  run "$MYPROG" args "'single quotes'" '"double quotes"' -- '\' '$variables' '*'
+  compare "$stdout" output/routing/metacharacters
+}
+
+@test "preserves arguments containing newlines" {
+  run "$MYPROG" args "multiple${NL}lines"
+  compare "$stdout" output/routing/multiple-lines
+}
+
+@test "supports passing more than nine arguments" {
+  run "$MYPROG" args a b c d e f g h i j
+  compare "$stdout" output/routing/ten
+}
+
+@test "does not run private executables" {
+  run "$MYPROG" public
+  read -r line <"$stdout"
+  [ $status -eq 0 ]
+  [ "$line" = "$MYPROG_ROOT"/libexec/myprog-public--private ]
+  run "$MYPROG" public--private
+  [ $status -ne 0 ]
+  match "$stderr" '/^usage:/'
+}
+
+@test "unknown command names print a not-found message and exit with status 127" {
+  run "$MYPROG" nonexistent || status=$?
+  [ $status -eq 127 ]
+  match "$stderr" '/^myprog: nonexistent: command not found$/'
+}

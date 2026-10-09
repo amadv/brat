@@ -1,0 +1,118 @@
+#!/bin/sh
+. "$DIR"/helpers.sh
+
+getvar() {
+  var="$1"
+  shift
+  "$@" --- eval 'printf "%s\n" "$'"$var"'"'
+}
+
+@test "sets SELF to the router’s absolute path" {
+  self="$(getvar SELF "$MYPROG")"
+  [ "$self" = "$MYPROG_PATH" ]
+}
+
+@test "resolves SELF through a symlinked router in another directory" {
+  mkdir "$TEST_TMP".bin
+  program="$TEST_TMP".bin/myprog
+  ln -s "$PWD/$MYPROG" "$program"
+  self="$(getvar SELF "$program")"
+  [ "$self" = "$MYPROG_PATH" ]
+}
+
+@test "resolves SELF through a symlinked parent directory" {
+  ln -s "$PWD/$MYPROG_DIR/bin" "$TEST_TMP".bin
+  program="$TEST_TMP".bin/myprog
+  self="$(getvar SELF "$program")"
+  [ "$self" = "$MYPROG_PATH" ]
+}
+
+@test 'resolves SELF when the router is found by name in $PATH' {
+  PATH="$MYPROG_ROOT/bin:$PATH"
+  self="$(getvar SELF myprog)"
+  [ "$self" = "$MYPROG_PATH" ]
+}
+
+@test "runs commands and hooks when installed under a path containing spaces" {
+  mkdir "$TEST_TMP.with space"
+  cp -R "$MYPROG_ROOT" "$TEST_TMP.with space"/myprog
+  root="$(realpath "$TEST_TMP.with space"/myprog)"
+  export MYPROG_INIT="echo init"
+  run "$root"/bin/myprog zero
+  { read -r line1; read -r line2; } <"$stdout"
+  [ "$line1" = init ]
+  [ "$line2" = "$root"/libexec/myprog-zero ]
+}
+
+@test "sets ROOT two levels above the router" {
+  root="$(getvar ROOT "$MYPROG")"
+  [ "$root" = "$MYPROG_ROOT" ]
+}
+
+@test 'sets NAME to the basename of $0' {
+  mkdir "$TEST_TMP".bin
+  ln -s "$PWD/$MYPROG" "$TEST_TMP".bin/other
+  name="$(getvar NAME "$TEST_TMP".bin/other)"
+  [ "$name" = other ]
+}
+
+@test 'sets PROGRAM_NAME to the basename of $SELF' {
+  mkdir "$TEST_TMP".bin
+  ln -s "$PWD/$MYPROG" "$TEST_TMP".bin/other
+  program_name="$(getvar PROGRAM_NAME "$TEST_TMP".bin/other)"
+  [ "$program_name" = myprog ]
+}
+
+@test '$NAME and $PROGRAM_NAME differ when invoked through a namespace link' {
+  name="$(getvar NAME "$MYPROG" ns)"
+  program_name="$(getvar PROGRAM_NAME "$MYPROG" ns)"
+  [ "$name" = myprog-ns ]
+  [ "$program_name" = myprog ]
+}
+
+@test 'sets LIB, LIBEXEC, SHARE, and VENDOR relative to $ROOT' {
+  [ "$(getvar LIB "$MYPROG")" = "$MYPROG_ROOT"/lib/myprog ]
+  [ "$(getvar LIBEXEC "$MYPROG")" = "$MYPROG_ROOT"/libexec ]
+  [ "$(getvar SHARE "$MYPROG")" = "$MYPROG_ROOT"/share/myprog ]
+  [ "$(getvar VENDOR "$MYPROG")" = "$MYPROG_ROOT"/share/myprog/vendor ]
+}
+
+@test 'SHARE and VENDOR use $PROGRAM_NAME, not $NAME' {
+  [ "$(getvar LIB "$MYPROG" ns)" = "$MYPROG_ROOT"/lib/myprog-ns ]
+  [ "$(getvar LIBEXEC "$MYPROG" ns)" = "$MYPROG_ROOT"/libexec ]
+  [ "$(getvar SHARE "$MYPROG" ns)" = "$MYPROG_ROOT"/share/myprog ]
+  [ "$(getvar VENDOR "$MYPROG" ns)" = "$MYPROG_ROOT"/share/myprog/vendor ]
+}
+
+@test 'prepends $LIB, $LIBEXEC, and $VENDOR to PATH' {
+  path_before="$PATH"
+  path_after="$(getvar PATH "$MYPROG")"
+  path_prefix="${path_after%"$path_before"}"
+  path="$(getvar LIB "$MYPROG"):$(getvar LIBEXEC "$MYPROG"):$(getvar VENDOR "$MYPROG"):"
+  [ "$path_prefix" = "$path" ]
+}
+
+@test "exports SELF to commands" {
+  self="$("$MYPROG" eval 'printf "%s\n" "$SELF"')"
+  [ "$self" = "$(getvar SELF "$MYPROG")" ]
+}
+
+@test "does not export ROOT, LIB, NAME, or OLDENV by default" {
+  run env -i PATH="$PATH" "$MYPROG" eval env
+  not match "$stdout" '/^(ROOT|LIB|NAME|OLDENV)=/'
+}
+
+@test "captures OLDENV before any assignments" {
+  run getvar OLDENV env -i PATH="$PATH" SELF=aware "$MYPROG"
+  match "$stdout" '/^export SELF=.*aware/'
+}
+
+@test '$OLDENV can be evaluated to restore the caller’s PATH' {
+  path="$("$MYPROG" --- eval 'eval "$OLDENV"; printf "%s\n" "$PATH"')"
+  [ "$path" = "$PATH" ]
+}
+
+@test 'commands can source files from $LIB without explicit paths' {
+  run "$MYPROG" eval '. myprog.sh; [ "$SOURCED_MYPROG_SH" -eq 1 ]'
+  [ $status -eq 0 ]
+}

@@ -1,0 +1,4 @@
+export BRAT_ROOT="${ROOT%/*}"
+SITE="$BRAT_ROOT/site"
+export LIB LIBEXEC SHARE SITE
+export X_OLDENV="${X_OLDENV-$OLDENV}"

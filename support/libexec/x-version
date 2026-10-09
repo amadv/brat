@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+. x.sh
+
+USAGE="[<FILE>]"
+[ $# -le 1 ] || usage
+
+infile "${1:-}"
+
+x-show code "$infile" | sha256sum | cut -c 1-6
